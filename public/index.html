@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Board Arena Online</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0f1c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#0e1118;--sf:#181d29;--sf2:#212838;--tx:#e8ecf4;--mu:#8791a7;--bd:#2d3650;--me:#35a8ff;--en:#ff5a66;--gn:#43c07a;--c1:#26304a;--c2:#1d2539;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#dfe4ee;--sf:#fff;--sf2:#eef1f7;--tx:#1b2030;--mu:#667089;--bd:#c5cce0;--c1:#e6ebf6;--c2:#d3dbee}}
+:root[data-theme="light"]{--bg:#dfe4ee;--sf:#fff;--sf2:#eef1f7;--tx:#1b2030;--mu:#667089;--bd:#c5cce0;--c1:#e6ebf6;--c2:#d3dbee}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.frame{width:min(100vw,calc(100vh*2.1));height:min(100%,calc(100vw/1.9));display:grid;grid-template-columns:22% 1fr 28%;background:var(--sf);border:2px solid var(--bd);border-radius:14px;overflow:hidden;font-size:clamp(9px,2.5vh,15px)}
+@media (max-height:520px){.frame{border-radius:0;border:0}}
+.col{padding:.6em;overflow:auto;min-height:0}
+.left{border-right:1px solid var(--bd)}.right{border-left:1px solid var(--bd)}
+.mid{display:flex;flex-direction:column;padding:.5em;min-width:0;min-height:0;background:var(--bg)}
+.top{display:flex;align-items:center;gap:.6em;padding-bottom:.4em;white-space:nowrap}
+.msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--mu);font-size:.85em}
+.bw{flex:1;min-height:0;display:flex;justify-content:center}
+.bwrap{position:relative;height:100%;aspect-ratio:1/1}
+.board{width:100%;height:100%;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);border:2px solid var(--bd);border-radius:6px;overflow:hidden}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;background:var(--c1);cursor:pointer;min-width:0}
+.cell.k{background:var(--c2)}
+.cell.mv::after{content:"";width:34%;height:34%;border-radius:50%;background:var(--me);opacity:.55;position:absolute}
+.cell.mc{box-shadow:inset 0 0 0 2px #f3c53a88}
+.cell.am{box-shadow:inset 0 0 0 1px rgba(255,150,60,.5);background-image:linear-gradient(rgba(255,150,60,.12),rgba(255,150,60,.12))}
+.cell.at{background-image:linear-gradient(rgba(255,90,102,.4),rgba(255,90,102,.4));box-shadow:inset 0 0 0 2px var(--en)}
+.cell.al{background-image:linear-gradient(rgba(67,192,122,.35),rgba(67,192,122,.35));box-shadow:inset 0 0 0 2px var(--gn)}
+.cell.sel{--g:var(--me);background:linear-gradient(var(--g),var(--g)) 0 0/32% 3px no-repeat,linear-gradient(var(--g),var(--g)) 0 0/3px 32% no-repeat,linear-gradient(var(--g),var(--g)) 100% 0/32% 3px no-repeat,linear-gradient(var(--g),var(--g)) 100% 0/3px 32% no-repeat,linear-gradient(var(--g),var(--g)) 0 100%/32% 3px no-repeat,linear-gradient(var(--g),var(--g)) 0 100%/3px 32% no-repeat,linear-gradient(var(--g),var(--g)) 100% 100%/32% 3px no-repeat,linear-gradient(var(--g),var(--g)) 100% 100%/3px 32% no-repeat,var(--c1);filter:drop-shadow(0 0 4px var(--me));z-index:2}
+.sh{--gl:drop-shadow(0 0 .1em var(--tc)) drop-shadow(0 0 .42em var(--tg));position:relative;width:82%;height:82%;display:flex;align-items:center;justify-content:center;z-index:1;filter:var(--gl)}
+.sh .o,.sh .n{position:absolute;inset:0;clip-path:var(--cp)}
+.sh .o{background:linear-gradient(135deg,var(--ea),var(--eb) 30%,var(--ea) 48%,var(--eb) 68%,var(--ea))}
+.sh .n{inset:6.5%;background:#05050a}
+.s-common{--cp:circle(50%)}
+.s-uncommon{--cp:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.s-rare{--cp:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)}
+.s-epic{--cp:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.s-legend{--cp:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)}
+.sh.ghost{opacity:.45;filter:var(--gl) drop-shadow(0 0 4px #9ad)}
+.sh.fly{transform:translateY(-12%)}
+.sh.fly::before{content:"";position:absolute;left:14%;right:14%;bottom:-16%;height:12%;border-radius:50%;background:#0007}
+.sh.aura{animation:au 1.2s infinite alternate}
+@keyframes au{from{filter:var(--gl) drop-shadow(0 0 2px #ff7a2a)}to{filter:var(--gl) drop-shadow(0 0 9px #ff7a2a)}}
+.sh.frz{filter:var(--gl) saturate(.3) brightness(1.4) hue-rotate(160deg)}
+.hb{position:absolute;left:10%;right:10%;bottom:3%;height:10%;background:#0009;border-radius:3px;overflow:hidden;z-index:3}
+.hb i{display:block;height:100%;background:var(--gn)}
+.sb{position:absolute;left:6%;top:4%;background:var(--me);color:#04121f;font-size:.7em;font-weight:700;border-radius:99px;padding:0 .4em;z-index:3}
+.stb{position:absolute;right:2%;top:2%;font-size:.55em;z-index:3;line-height:1;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:78%;gap:1px}
+.fxl{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+.fxs{width:100%;height:100%;display:block}
+.fa{animation-delay:calc(var(--dl,0ms) + var(--d,1000ms)*var(--a,0));animation-duration:calc(var(--d,1000ms)*var(--b,1));animation-fill-mode:both;animation-timing-function:ease-out;transform-box:fill-box;transform-origin:center}
+.fa.pulse{animation-name:fxPulse}
+.fa.burst{animation-name:fxBurst}
+.fa.flash{animation-name:fxFlash}
+.fa.draw{animation-name:fxDraw;stroke-dasharray:1}
+.fa.rise{animation-name:fxRise}
+.fa.fall{animation-name:fxFall}
+.fa.fly{animation-name:fxFly}
+.fa.shot{animation-name:fxShot;animation-timing-function:cubic-bezier(.35,.05,.75,.95)}
+.fa.drop{animation-name:fxDrop;animation-timing-function:cubic-bezier(.4,0,.9,.6)}
+.fa.flick{animation-name:fxFlick;animation-timing-function:linear}
+.fa.spin{animation-name:fxSpin;animation-timing-function:linear}
+.fa.puff{animation-name:fxPuff}
+.fa.arcx{animation-name:fxArcX;animation-timing-function:linear}
+.fa.arcy{animation-name:fxArcY;animation-timing-function:ease-in-out}
+.fa.fade{animation-name:fxFade;animation-timing-function:linear}
+.fa.beam{animation-name:fxBeam}
+.fa.numt{animation-name:fxNum}
+@keyframes fxPulse{0%{transform:scale(.15);opacity:0}15%{opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes fxBurst{0%{transform:scale(.2);opacity:0}25%{opacity:1}100%{transform:scale(1.25);opacity:0}}
+@keyframes fxFlash{0%{opacity:0}12%{opacity:.9}100%{opacity:0}}
+@keyframes fxDraw{0%{stroke-dashoffset:1;opacity:0}2%{stroke-dashoffset:1;opacity:1}55%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes fxRise{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(calc(var(--dx,0)*1px),calc(var(--dy,-12)*1px));opacity:0}}
+@keyframes fxFall{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(calc(var(--dx,0)*1px),calc(var(--dy,10)*1px));opacity:0}}
+@keyframes fxFly{0%{transform:translate(0,0) scale(1);opacity:0}8%{opacity:1}100%{transform:translate(calc(var(--dx,0)*1px),calc(var(--dy,0)*1px)) scale(.4);opacity:0}}
+@keyframes fxShot{0%{transform:translate(0,0);opacity:0}8%{opacity:1}90%{opacity:1}100%{transform:translate(calc(var(--dx,0)*1px),calc(var(--dy,0)*1px));opacity:0}}
+@keyframes fxDrop{0%{transform:translate(calc(var(--sx,0)*1px),calc(var(--sy,-30)*1px));opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translate(0,0);opacity:0}}
+@keyframes fxFlick{0%{opacity:0}8%{opacity:1}20%{opacity:.35}32%{opacity:1}48%{opacity:.5}60%{opacity:1}100%{opacity:0}}
+@keyframes fxSpin{0%{transform:rotate(0);opacity:0}15%{opacity:1}100%{transform:rotate(var(--rot,180deg));opacity:0}}
+@keyframes fxPuff{0%{transform:translate(0,0) scale(.3);opacity:0}25%{opacity:.85}100%{transform:translate(calc(var(--dx,0)*1px),calc(var(--dy,-4)*1px)) scale(1.5);opacity:0}}
+@keyframes fxArcX{0%{transform:translateX(0);opacity:0}2%{opacity:1}98%{opacity:1}100%{transform:translateX(calc(var(--dx,0)*1px));opacity:0}}
+@keyframes fxArcY{0%{transform:translateY(0);animation-timing-function:ease-out}50%{transform:translateY(calc(var(--dy,0)*.5px - var(--ah,8)*1px));animation-timing-function:ease-in}100%{transform:translateY(calc(var(--dy,0)*1px))}}
+@keyframes fxFade{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes fxBeam{0%{opacity:0;transform:scaleX(.15)}18%{opacity:1;transform:scaleX(1)}75%{opacity:.9;transform:scaleX(.85)}100%{opacity:0;transform:scaleX(1.4)}}
+@keyframes fxNum{0%{transform:translateY(0);opacity:0}12%{opacity:1}70%{opacity:1}100%{transform:translateY(-9px);opacity:0}}
+.ic{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.2em;flex:none}
+.sh .ch{position:absolute;inset:9%;width:82%;height:82%;display:block;clip-path:var(--cp)}
+.sk small.tg{color:var(--mu);font-size:.72em}
+.sk .i .ic{width:1.1em;height:1.1em;vertical-align:middle}
+.stb .st{display:inline-flex;align-items:center;background:#000b;border-radius:99px;padding:0 .3em 0 .1em;color:#fff}
+.stb .ic{width:1.7em;height:1.7em;vertical-align:middle}
+.stb b{font-size:1.1em;font-weight:700}
+.ov .ic{width:1.3em;height:1.3em}
+.hp .ic{width:1.3em;height:1.3em}
+.ps .ic{vertical-align:-.25em}
+#rot .ic{width:3em;height:3em;display:block;margin:0 auto .4em}
+.setup h2 .ic{width:1.1em;height:1.1em}
+.row{display:flex;align-items:center;gap:.5em;padding:.3em;border-radius:8px;cursor:pointer;margin-bottom:.3em;background:var(--sf2)}
+.row.s{outline:2px solid var(--me)}.row.e.s{outline-color:var(--en)}
+.row .sh{width:2.2em;height:2.2em;flex:none}
+.row .bar{flex:1}
+.bar{height:.7em;background:var(--bd);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gn)}
+.row small{color:var(--mu)}
+hr{border:0;border-top:1px solid var(--bd);margin:.6em 0}
+.por{display:flex;gap:.6em;align-items:center}
+.por .sh{width:3.4em;height:3.4em;flex:none}
+.nm{font-weight:700;font-size:1.1em}
+.hp{display:flex;align-items:center;gap:.5em;margin:.6em 0}
+.ps{font-size:.85em;color:var(--mu);margin-bottom:.4em}
+.sk{width:100%;display:flex;align-items:center;gap:.6em;text-align:left;background:var(--sf2);color:var(--tx);border:2px solid var(--bd);border-radius:10px;padding:.4em;margin-bottom:.4em;font:inherit;cursor:pointer}
+.sk.on{border-color:var(--en)}
+.sk:disabled{opacity:.45;cursor:not-allowed}
+.sk .i{font-size:1.5em;width:1.7em;height:1.7em;flex:none;border:1px solid var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.sk b{display:block}.sk small{color:var(--mu);font-size:.8em;display:block}
+button.m{font:inherit;background:var(--me);color:#04121f;border:0;border-radius:8px;padding:.4em .9em;font-weight:700;cursor:pointer}
+button.m:disabled{opacity:.4}
+.mu{color:var(--mu)}
+.ov{position:absolute;inset:0;background:#000a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8em;z-index:8;text-align:center;border-radius:6px;color:#fff}
+.setup{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;-webkit-overflow-scrolling:touch;padding:12px;z-index:9;text-align:center;overflow:auto}
+.opts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.setup>:first-child{margin-top:auto}.setup>:last-child{margin-bottom:auto}
+.opt{background:var(--sf);color:var(--tx);border:2px solid var(--bd);border-radius:12px;padding:8px 10px;font:inherit;cursor:pointer;width:116px;font-size:13px}
+.opt.on{border-color:var(--me);box-shadow:0 0 8px var(--me)}
+.opt .sh{width:48px;height:48px;margin:0 auto 4px}
+#rot{display:none;position:fixed;inset:0;background:var(--bg);z-index:20;align-items:center;justify-content:center;text-align:center;font-size:18px;padding:20px}
+@media (orientation:portrait){#rot{display:flex}}
+
+#onlineLobby{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 50% 15%,#263653 0,#111827 58%,#0b0e15 100%);color:#eef3ff;font-family:system-ui,sans-serif}
+#onlineLobby .box{width:min(440px,100%);background:#171f30;border:1px solid #3b4b69;border-radius:20px;padding:24px;box-shadow:0 18px 60px #0008;text-align:center}
+#onlineLobby h1{margin:0 0 6px;font-size:clamp(25px,6vw,34px)}
+#onlineLobby .sub{color:#aab7cf;margin:0 0 22px}
+#onlineLobby input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid #52627e;background:#0e1522;color:#fff;font:inherit;text-align:center;letter-spacing:3px;text-transform:uppercase;margin:8px 0}
+#onlineLobby button{width:100%;padding:13px;border:0;border-radius:10px;background:#35a8ff;color:#071321;font:inherit;font-weight:800;margin:6px 0;cursor:pointer}
+#onlineLobby button.alt{background:#29364d;color:#eaf1ff;border:1px solid #52627e}
+#onlineLobby button:disabled{opacity:.45;cursor:not-allowed}
+#onlineLobby .status{margin-top:14px;padding:12px;border-radius:10px;background:#0e1522;color:#b9c7dd;min-height:44px;font-size:14px}
+#onlineLobby .room{font-size:30px;letter-spacing:6px;font-weight:900;color:#7fc7ff;margin:10px 0}
+#onlineLobby .players{display:flex;justify-content:space-around;margin:16px 0;color:#d8e4f7}
+#onlineLobby .tiny{font-size:12px;color:#8998b2;margin-top:14px;line-height:1.5}
+
+@media (max-height:520px){.setup{gap:6px;padding:8px}.setup h2{font-size:16px}.opts{gap:6px}.setup .opt{width:92px;padding:5px 6px;font-size:11px}.setup .opt .sh{width:36px;height:36px;margin-bottom:2px}.opt small{display:block;line-height:1.2}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1f6ff"/><stop offset=".5" stop-color="#9fb0cc"/><stop offset="1" stop-color="#56647f"/></linearGradient>
+<linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".5" stop-color="#e0aa43"/><stop offset="1" stop-color="#8a5f1d"/></linearGradient>
+<linearGradient id="gCrim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ef5a5a"/><stop offset="1" stop-color="#7a1423"/></linearGradient>
+<linearGradient id="gForest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#58915a"/><stop offset="1" stop-color="#1f3a26"/></linearGradient>
+<linearGradient id="gRobeFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a45"/><stop offset="1" stop-color="#9c1f10"/></linearGradient>
+<linearGradient id="gViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d5fcb"/><stop offset="1" stop-color="#2b1a4a"/></linearGradient>
+<linearGradient id="gLeafRobe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe8b0"/><stop offset="1" stop-color="#3f8f52"/></linearGradient>
+<linearGradient id="gLeaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f2a8"/><stop offset="1" stop-color="#3f8f4c"/></linearGradient>
+<linearGradient id="fxBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a" stop-opacity="0"/><stop offset="1" stop-color="#fff6c8" stop-opacity=".95"/></linearGradient>
+<radialGradient id="fxFire"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#ffe27a"/><stop offset=".55" stop-color="#ff8a2a"/><stop offset=".8" stop-color="#d02a12" stop-opacity=".8"/><stop offset="1" stop-color="#d02a12" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxWhite"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#dfe9ff" stop-opacity=".7"/><stop offset="1" stop-color="#dfe9ff" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxGreen"><stop offset="0" stop-color="#f0ffe8"/><stop offset=".45" stop-color="#7fe08a" stop-opacity=".8"/><stop offset="1" stop-color="#3fae5a" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxGold"><stop offset="0" stop-color="#fffbe0"/><stop offset=".45" stop-color="#ffd25a" stop-opacity=".85"/><stop offset="1" stop-color="#e09a20" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxPurple"><stop offset="0" stop-color="#f5e8ff"/><stop offset=".45" stop-color="#a35be0" stop-opacity=".8"/><stop offset="1" stop-color="#5a2a9a" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxSmoke"><stop offset="0" stop-color="#d7dbe8" stop-opacity=".9"/><stop offset=".6" stop-color="#8a8fa6" stop-opacity=".6"/><stop offset="1" stop-color="#6a6f86" stop-opacity="0"/></radialGradient>
+<radialGradient id="fxPoison"><stop offset="0" stop-color="#e2ffb4"/><stop offset=".5" stop-color="#7fcf3a" stop-opacity=".7"/><stop offset="1" stop-color="#4a8a1a" stop-opacity="0"/></radialGradient>
+<linearGradient id="gShadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4272"/><stop offset="1" stop-color="#14101f"/></linearGradient>
+</defs></svg>
+
+<div id="onlineLobby">
+  <div class="box">
+    <h1>BOARD ARENA</h1>
+    <p class="sub">ONLINE ROOM</p>
+    <div id="lobbyHome">
+      <button id="createRoomBtn">สร้างห้องใหม่</button>
+      <div style="color:#9eacc3;margin:12px 0 4px">หรือเข้าร่วมห้องด้วยรหัส</div>
+      <input id="roomCodeInput" maxlength="6" placeholder="รหัสห้อง 6 ตัว" autocomplete="off">
+      <button id="joinRoomBtn" class="alt">เข้าร่วมห้อง</button>
+    </div>
+    <div id="lobbyRoom" hidden>
+      <div style="color:#9eacc3">รหัสห้องของคุณ</div>
+      <div class="room" id="roomCodeDisplay">------</div>
+      <div class="players">
+        <div>ผู้เล่น 1<br><b id="p1State">รอผู้เล่น</b></div>
+        <div>ผู้เล่น 2<br><b id="p2State">รอผู้เล่น</b></div>
+      </div>
+      <button id="readyBtn" disabled>พร้อม</button>
+      <button id="leaveRoomBtn" class="alt">ออกจากห้อง</button>
+    </div>
+    <div class="status" id="lobbyStatus">กำลังเชื่อมต่อเซิร์ฟเวอร์...</div>
+    <div class="tiny">เมื่อทั้งสองฝ่ายพร้อม จะเลือกกองกำลังของตนเอง แล้วเล่น PvP ออนไลน์บนกระดานเดียวกัน</div>
+  </div>
+</div>
+
+<div id="rot"></div>
+<div class="frame" id="g"></div>
+<div class="setup" id="su"></div>
+<script>
+// Shows any startup/runtime error on screen (a blank page is otherwise silent on phones).
+(function(){function show(m){try{var d=document.getElementById("errbar");if(!d){d=document.createElement("div");d.id="errbar";d.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99999;background:#b00020;color:#fff;font:12px/1.4 monospace;padding:6px 8px;white-space:pre-wrap;max-height:50vh;overflow:auto";(document.body||document.documentElement).appendChild(d)}d.textContent+=m+"\n"}catch(e){}}
+window.addEventListener("error",function(e){show("[v3] "+(e.message||"error")+(e.filename?" @"+e.filename.split("/").pop()+":"+e.lineno:""))});
+window.addEventListener("unhandledrejection",function(e){show("[v3] promise: "+(e.reason&&e.reason.message||e.reason))});
+window.addEventListener("load",function(){if(typeof io==="undefined")show("[v3] socket.io ไม่ถูกโหลด (/socket.io/socket.io.js)")})})();
+</script>
+<script>if("serviceWorker"in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});</script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const R={
+sword:{n:"Swordman",rar:"common",el:"steel",hp:100,mv:1,pop:2,
+ pas:"รีเฟล็กซ์ นักรบ: โอกาส 15% ปัดป้องลูกธนูระดับต่ำ",
+ blk:[{p:.15,c:["phys"],l:["low"],tg:"arrow"}],
+ s:[{n:"Slash",i:"slash",k:"t",r:1,d:7,c:"phys",l:"low",cd:0,v:"slash",tags:["phys","sword","melee","ground"]}]},
+archer:{n:"Archer",rar:"common",el:"wind",hp:60,mv:1,pop:2,pas:"",blk:[],
+ s:[{n:"Wind Arrow",i:"windArrow",k:"t",r:2,d:5,c:"phys",l:"low",cd:1,tg:"arrow",v:"windArrow",tags:["phys","arrow","ranged"]},
+    {n:"Wind Meteorite",i:"arrowRain",k:"t",r:4,d:10,dt:"true",c:"phys",l:"mid",cd:3,tg:"arrow",v:"arrowRain",tags:["phys","arrow","ranged"]}]},
+mage:{n:"Firemage",rar:"common",el:"fire",hp:60,mv:1,pop:3,pas:"",blk:[],
+ s:[{n:"Fireball",i:"fireball",k:"t",r:2,d:7,c:"magic",l:"low",cd:1,tg:"fire",v:"fireball",tags:["magic","fire","ranged"]},
+    {n:"Meteorite",i:"meteor",v:"meteor",k:"a",r:"ทั้งกระดาน",d:5,c:"magic",l:"mid",cd:4,tg:"meteor",tags:["magic","fire","ranged"],x:"โดน 5 ช่อง (กากบาท) โดนพวกเดียวกันได้"},
+    {n:"Fire Aura",i:"aura",v:"aura",k:"s",r:"รอบตัว 1",d:5,c:"magic",l:"mid",cd:6,tg:"fire",sh:5,tags:["magic","fire","melee"],x:"โล่ 5 + ดาเมจรอบตัว 3 ครั้ง"}]},
+shield:{n:"Shield man",rar:"common",el:"frost",hp:120,mv:1,pop:2,
+ pas:"Blocker: โอกาส 40% กันกายภาพต่ำ/กลาง และเวทย์ต่ำ",
+ blk:[{p:.4,c:["phys"],l:["low","mid"]},{p:.4,c:["magic"],l:["low"]}],
+ s:[{n:"Shield Blast",i:"blast",k:"t",r:1,d:5,c:"phys",l:"low",cd:0,v:"blast",tags:["phys","melee","ground"]}]},
+meric:{n:"Meric",rar:"uncommon",el:"holy",hp:60,mv:1,pop:3,pas:"Healer",blk:[],
+ s:[{n:"Rejuvenation",i:"rejuv",v:"rejuv",k:"h",r:3,heal:6,cd:1,x:"ล้าง Bleeding/Poison ด้วย"},
+    {n:"Light of Gentle",i:"light",v:"light",k:"r",r:3,heal:5,cd:5,x:"ฟื้น 5 ทันที + อีก 2 ครั้งตอนเริ่มเทิร์น"}]},
+assassin:{n:"Assassin",rar:"uncommon",el:"shadow",hp:60,mv:1,pop:3,pas:"",blk:[],
+ s:[{n:"Dagger Strike",i:"dagger",v:"dagger",k:"t",r:1,d:7,c:"phys",l:"low",cd:1,tags:["phys","dagger","melee","ground"],alt:{on:"ww",v:"daggerB",n:"Sharpness-Dagger",d:8,bleed:99,xww:1,x:"ติด Bleeding (ไม่หมดจนกว่าจะถูกรักษา) และออกจาก Wind-Walk"}},
+    {n:"Legging-Dash",i:"dash",v:"dash",k:"m",r:2,cd:1,x:"หัก MP 1 เดินไกล 2 ช่อง",alt:{on:"ww",v:"tele",n:"Teleport",r:"ทั้งกระดาน",tp:1,x:"หัก MP 1 วาร์ปได้ 1 ครั้งต่อ Wind-Walk"}},
+    {n:"Invisible Bomb",i:"smoke",v:"smoke",k:"w",cd:4,x:"Wind-Walk 3 เทิร์น (CD นับหลังออก)"}]},
+witch:{n:"Wandering Witch",rar:"rare",el:"arcane",hp:60,mv:1,pop:3,pas:"",blk:[],
+ s:[{n:"Lightning Oak Wand",i:"lightning",v:"lightning",k:"t",r:2,d:4,c:"magic",l:"low",cd:1,tg:"lightning",chain:1,tags:["magic","lightning","ranged"],x:"ชิ่งไปศัตรูใกล้เคียง 1 ตัว",
+     alt:{on:"fly",v:"strike",n:"Lightning Strike",d:8,chain:0,x:"บิน: เป้าเดียว ×2"}},
+    {n:"Alchemist Potions",i:"potion",v:"potion",k:"p",r:1,cd:2,x:"เพื่อน = ฟื้นฟู 2 ตา ตาละ 3 · ศัตรู = Poison"},
+    {n:"Witch's Broomstick",i:"broom",v:"swirl",k:"f",cd:3,x:"บิน 3 เทิร์น เดิน 2 ช่อง (CD นับหลังลงพื้น)"}]},
+redscales:{n:"Red Scales",rar:"epic",el:"dragon",hp:150,mv:1,pop:5,pf:1,utags:["dragon","fire"],
+ flyRangedMul:2,rangedGroundImmune:1,res:{fire:.5,water:3},
+ pas:"มังกร: บินตลอด โจมตีแล้วลงพื้นจนถึงเทิร์นตัวเอง · ตอนบินรับดาเมจระยะไกล ×2 · ตอนอยู่พื้นโดนระยะไกลไม่ได้ · รับดาเมจแท็กไฟ −50% แท็กน้ำ +200%",
+ blk:[],
+ s:[{n:"Dragon's Claws",i:"claws",v:"claws",k:"t",r:1,d:7,c:"phys",l:"low",cd:1,bleed:2,tags:["phys","claw","melee"],x:"ติด Bleeding 2 ตา"},
+    {n:"Red Breath",i:"breath",v:"breath",k:"t",r:2,d:3,c:"magic",l:"mid",cd:3,burn:3,tags:["magic","fire","breath","ranged"],x:"ติด Burning 3 สแต็ก"},
+    {n:"Asteroid",i:"asteroid",v:"asteroid",k:"j",r:"ทุกช่อง",d:6,c:"phys",l:"mid",cd:5,tp:1,fl:1,tags:["phys","tail","melee","ground"],x:"ใช้ได้เฉพาะตอนบิน · กระโดดไปช่องไหนก็ได้ ดาเมจรอบตัว 8 ช่อง (เฉพาะศัตรูพื้นดิน)"}]},
+jugger:{n:"Juggerknight",rar:"epic",el:"royal",hp:150,mv:1,pop:4,utags:["human","armored"],
+ pas:"Armored Human: 50% ปัดป้องการโจมตีกายภาพทุกชนิดทุกระยะ",
+ blk:[{p:.5,c:["phys"],l:["low","mid","high"]}],
+ s:[{n:"Steel Giant Sword",i:"gsword",v:"gsword",k:"t",r:1,d:6,c:"phys",l:"low",cd:0,stunP:.2,stun:1,tags:["phys","sword","melee","ground","kingdom"],x:"โอกาสสตัน 20% · ดาบอาณาจักร +50% ต่อมังกร/ภูติ/ตำนาน"},
+    {n:"Crushing Leap",i:"leap",v:"leap",k:"L",r:2,d:10,c:"phys",l:"high",cd:3,stun:1,tags:["phys","high","sword","ground","kingdom"],x:"กระโดดใส่ศัตรู ผลักออก 1 ช่องแล้วยืนแทนที่ · สตัน 1 ตา"}]}};
+const KEYS=Object.keys(R),CAP=15,RAR={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legend:"Legend"};
+const TAGN={phys:"กายภาพ",magic:"เวทย์",melee:"ระยะใกล้",ranged:"ระยะไกล",ground:"พื้นดิน",fire:"ไฟ",water:"น้ำ",sword:"ดาบ",arrow:"ธนู",kingdom:"ดาบอาณาจักร",claw:"กรงเล็บ",dagger:"มีด",lightning:"สายฟ้า",breath:"ลมหายใจ",tail:"หาง",high:"โจมตีระดับสูง"};
+const hasT=(s,g)=>(s.tags||[]).includes(g);
+// ranged = range above 1 (or the ranged tag); the melee tag always overrides
+const isRanged=s=>!hasT(s,"melee")&&(hasT(s,"ranged")||(typeof s.r==="number"&&s.r>1)||s.r==="ทั้งกระดาน");
+const unitTags=u=>[...(R[u.k].utags||[]),...(R[u.k].rar==="legend"?["legend"]:[])];
+// can this skill touch this target at all? (frozen, flying vs ground skills, grounded dragon vs ranged skills)
+function canHit(s,t){
+  if(!U.includes(t)||t.st.freeze>0)return false;
+  if(hasT(s,"ground")&&t.fly>0)return false;
+  if(isRanged(s)&&R[t.k].rangedGroundImmune&&!(t.fly>0))return false;
+  return true;
+}
+const ADJ=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+// empty cell around t where the leaping unit pushes it: farthest from the attacker
+function pushCell(u,t){
+  let best=null;
+  ADJ.forEach(d=>{
+    const x=t.x+d[0],y=t.y+d[1];
+    if(x<0||y<0||x>9||y>9||at(x,y))return;
+    const sc=Math.hypot(x-u.x,y-u.y);
+    if(!best||sc>best.sc)best={x,y,sc};
+  });
+  return best?[best.x,best.y]:null;
+}
+const CR=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
+let U=[],P=[{mp:2,ap:2},{mp:2,ap:2}],sel=null,mode=-1,turn=0,over=-1,pick=[],msg="",FX=[],fxOut=[],nid=1;
+const $=id=>document.getElementById(id);
+const at=(x,y)=>U.find(u=>u.x===x&&u.y===y);
+const byId=id=>U.find(u=>u.id===id);
+const dist=(a,b)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const eff=(u,si)=>{const s=R[u.k].s[si],a=s.alt;if(!a)return s;return(a.on==="ww"?u.ww:u.fly)>0?{...s,...a}:s};
+const dis=u=>u.stunned||u.st.freeze>0;
+const hidden=u=>(onlineGame?u.team!==onlineMyTeam:u.team===1)&&u.ww>0;
+const shape=(k,team,ex="")=>{const e=EL[R[k].el];return `<div class="sh s-${R[k].rar} ${ex}" style="--ea:${e.a};--eb:${e.b};--tc:var(${team?"--en":"--me"});--tg:${team?"rgba(255,90,102,.85)":"rgba(53,168,255,.85)"}"><span class="o"></span><span class="n"></span>${CHAR(k)}</div>`};
+const info=s=>[s.d?((s.dt==="true"?"ดาเมจจริง":s.c==="phys"?"กายภาพ":"เวทย์")+" "+s.d):(s.heal?"ฟื้นฟู "+s.heal:null),s.r!==undefined?"ระยะ "+s.r:null,"CD "+s.cd].filter(Boolean).join(" · ");
+const icons=u=>[u.st.bleed>0?stI("bleed",u.st.bleed<10?u.st.bleed:""):"",u.st.poison?stI("poison",u.st.poison):"",u.st.burn?stI("burn",u.st.burn):"",u.st.freeze>0?stI("freeze"):"",u.st.silent>0?stI("silent"):"",u.stunned&&turn===u.team?stI("stun"):"",u.st.regen?stI("regen"):"",u.ww>0?stI("ghost"):""].join("");
+
+/* ---------- ART: silhouette characters (dark figure, rim light, element colour) ---------- */
+const SP="M0 -4L1.1 -1.1L4 0L1.1 1.1L0 4L-1.1 1.1L-4 0L-1.1 -1.1Z";
+// a = rim / highlight, b = metal + mid tone, d = dark edge, gl = glow
+const EL={
+ steel:{a:"#f4f8ff",b:"#8a97b2",d:"#161a26",gl:"#dbe8ff"},
+ wind:{a:"#a8ffe9",b:"#16b394",d:"#04201b",gl:"#5ff5d4"},
+ fire:{a:"#ffd27a",b:"#ff6a1f",d:"#2a0806",gl:"#ff9a3c"},
+ frost:{a:"#d9f2ff",b:"#4f9fd8",d:"#08142b",gl:"#8fd3ff"},
+ holy:{a:"#fff6c8",b:"#e0a93a",d:"#2a1d05",gl:"#ffe27a"},
+ shadow:{a:"#ffa6cc",b:"#9a3fd0",d:"#12071d",gl:"#c06bff"},
+ arcane:{a:"#e9d0ff",b:"#7a3fd0",d:"#130828",gl:"#b98cff"},
+ dragon:{a:"#ffe08a",b:"#e5281a",d:"#2b0505",gl:"#ff7a2a"},
+ royal:{a:"#ffe9a8",b:"#2f5fd0",d:"#09112e",gl:"#7fa6ff"}
+};
+// Pictures live in /img as separate SVG files (img/char/<unit>.svg, img/icon/<name>.svg).
+// To change a picture, replace the file with the same name; nothing else needs editing.
+const IMG="img/";
+const CHAR=k=>`<img class="ch" src="${IMG}char/${k}.svg" alt="" draggable="false" onerror="this.style.visibility='hidden'">`;
+const ICON=n=>`<img class="ic" src="${IMG}icon/${n}.svg" alt="" draggable="false" onerror="this.style.visibility='hidden'">`;
+const ICON_NAMES="arrowRain asteroid aura blast bleed breath broom burn claws dagger dash fireball freeze ghost gsword heart leap light lightning meteor poison potion regen rejuv rotate shield silent skull slash smoke stun swords trophy windArrow wing".split(" ");
+// preload everything so frames never flash empty
+KEYS.forEach(k=>{new Image().src=IMG+"char/"+k+".svg"});ICON_NAMES.forEach(n=>{new Image().src=IMG+"icon/"+n+".svg"});
+const stI=(n,num)=>`<span class="st">${ICON(n)}${num?`<b>${num}</b>`:""}</span>`;
+
+/* ---------- visual effects (SVG, 10 units per board cell) ---------- */
+let FXLAG=0;
+const FXD={slash:1100,windArrow:1400,arrowRain:1700,fireball:1400,meteor:1900,aura:1400,blast:1200,rejuv:1600,light:1900,dagger:1000,daggerB:1200,dash:1100,tele:1300,smoke:1500,lightning:1200,strike:1300,potion:1700,swirl:1400,block:1100,hit:1100,tick:1100,num:1200};
+// milliseconds until the visual "impact", used to delay damage/heal numbers
+const FXH={slash:180,windArrow:560,arrowRain:1020,fireball:560,meteor:860,blast:200,dagger:120,daggerB:120,lightning:220,strike:180,potion:680,rejuv:480,light:250};
+const K=(c,a,b,x="")=>`class="fa ${c}" style="--a:${a};--b:${b};${x}"`;
+const rd=(f,i)=>{const s=Math.sin(((f.x||0)*7.1+(f.y||0)*13.7+(f.x2||0)*17.3+(f.y2||0)*19.1+i*31.7)*12.9898)*43758.5453;return s-Math.floor(s)};
+const TR=(x,y,body,sc=1)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})${sc!==1?` scale(${sc})`:""}">${body}</g>`;
+const glow=(g,r,a,b)=>`<circle r="${r}" fill="url(#${g})" ${K("burst",a,b)}/>`;
+const ring=(r,col,w,a,b)=>`<circle r="${r}" fill="none" stroke="${col}" stroke-width="${w}" ${K("pulse",a,b)}/>`;
+const rays=(n,r0,r1,col,w,a,b,rot=0)=>{let s="";for(let i=0;i<n;i++){const t=rot+i*6.2832/n,c=Math.cos(t),d=Math.sin(t);s+=`<line x1="${(c*r0).toFixed(1)}" y1="${(d*r0).toFixed(1)}" x2="${(c*r1).toFixed(1)}" y2="${(d*r1).toFixed(1)}"/>`}return `<g stroke="${col}" stroke-width="${w}" stroke-linecap="round" ${K("burst",a,b)}>${s}</g>`};
+const proj=(x,y,x2,y2,body,a,b)=>{const dx=x2-x,dy=y2-y,L=Math.hypot(dx,dy),ang=Math.atan2(dy,dx)*180/Math.PI;return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)})"><g ${K("shot",a,b,`--dx:${L.toFixed(1)};--dy:0;`)}>${body}</g></g>`};
+const bits=(f,n,shape,a,b,spread,lift,seed=0,cls="rise")=>{let s="";for(let i=0;i<n;i++){const ox=(rd(f,i+seed)-.5)*spread,oy=(rd(f,i+seed+9)-.5)*spread*.6,dx=(rd(f,i+seed+3)-.5)*spread*.8;s+=`<g transform="translate(${ox.toFixed(1)} ${oy.toFixed(1)})"><g ${K(cls,(a+i*.04).toFixed(2),b,`--dx:${dx.toFixed(1)};--dy:${lift};`)}>${shape}</g></g>`}return s};
+const zig=(f,x,y,x2,y2,seed=0,amp=2.4)=>{const L=Math.hypot(x2-x,y2-y)||1,n=Math.max(4,Math.round(L/4.5)),nx=-(y2-y)/L,ny=(x2-x)/L;let d=`M${x.toFixed(1)} ${y.toFixed(1)}`;for(let i=1;i<n;i++){const t=i/n,j=(rd(f,i+seed)-.5)*2*amp;d+=`L${(x+(x2-x)*t+nx*j).toFixed(1)} ${(y+(y2-y)*t+ny*j).toFixed(1)}`}return d+`L${x2.toFixed(1)} ${y2.toFixed(1)}`};
+const FL="M0 -7C3 -3 5 -1 4 3C3 6 -3 6 -4 3C-5 0 -2 -2 0 -7Z";
+const SHL="M0 -7L6 -4V2C6 6 3 8 0 10C-3 8 -6 6 -6 2V-4Z";
+const ARW=`<ellipse cx="-4" rx="8" ry="2.6" fill="url(#fxGreen)"/><path d="M-9 0H4" stroke="#8a5a2b" stroke-width="1.2" stroke-linecap="round"/><path d="M4 -2.2L9.5 0L4 2.2Z" fill="#e8f0ff" stroke="#1a1626" stroke-width=".4"/><path d="M-9 0L-11 -2M-9 0L-11 2M-7 0L-9 -2M-7 0L-9 2" stroke="#6fd08a" stroke-width="1" stroke-linecap="round"/>`;
+const S_EMBER=`<path d="${FL}" transform="scale(.4)" fill="#ff9a3c"/>`;
+const S_LEAF=`<path d="M0 -3.6C2.8 -1.8 2.8 1.8 0 3.6C-2.8 1.8 -2.8 -1.8 0 -3.6Z" fill="url(#gLeaf)" stroke="#2f6b3a" stroke-width=".4"/>`;
+const S_PLUS=`<path d="M-.8 -2.6H.8V-.8H2.6V.8H.8V2.6H-.8V.8H-2.6V-.8H-.8Z" fill="#d8ffd8"/>`;
+const S_STAR=`<path d="${SP}" fill="#fff6c8"/>`;
+const S_STARP=`<path d="${SP}" fill="#e6c8ff"/>`;
+const S_BUB=`<circle r="1.3" fill="none" stroke="#d8ffd8" stroke-width=".5"/>`;
+const S_DROP=`<path d="M0 -2.2C1.6 .2 2 1 2 1.6C2 2.8 1 3.4 0 3.4C-1 3.4 -2 2.8 -2 1.6C-2 1 -1.6 .2 0 -2.2Z" fill="#c01c2e"/>`;
+const S_PBUB=`<circle r="1.4" fill="#9be04a" fill-opacity=".7" stroke="#2f6a14" stroke-width=".4"/>`;
+const S_PCLOUD=`<circle r="4.5" fill="url(#fxPoison)"/>`;
+const IMP=(col,grad,a,r=12,n=8)=>glow(grad,r,a,.35)+rays(n,3,r-1,col,1.2,a,.3)+ring(r*.55,col,1.2,a,.38);
+
+const FXR={
+slash:(f,x,y,x2,y2)=>TR(x2,y2,`<path pathLength="1" d="M-8 -8Q3 -3 8 8" fill="none" stroke="#7fb4ff" stroke-opacity=".55" stroke-width="5" stroke-linecap="round" ${K("draw",.04,.5)}/><path pathLength="1" d="M-8 -8Q3 -3 8 8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" ${K("draw",.04,.5)}/>`+glow("fxWhite",10,.18,.5)+rays(6,2,9,"#cfe4ff",1,.2,.45)),
+windArrow:(f,x,y,x2,y2)=>TR(x,y,glow("fxGreen",7,0,.25))+proj(x,y,x2,y2,ARW+`<path d="M-12 -2.4Q-16 -4.6 -20 -1.4M-12 2.4Q-17 4.6 -22 1.4" stroke="#bfe8ff" stroke-width=".9" fill="none" stroke-linecap="round"/>`,0,.4)+TR(x2,y2,IMP("#c8ffe0","fxGreen",.4,12,8)+bits(f,4,S_LEAF,.4,.5,10,-12)),
+arrowRain:(f,x,y,x2,y2)=>TR(x,y,glow("fxGreen",8,0,.25))+TR(x2,y2,ring(8,"#ffd25a",1,0,.45)+ring(8,"#ffd25a",.8,.12,.45)+[0,1,2,3,4].map(i=>`<g transform="translate(${((i-2)*3.4).toFixed(1)} 0)"><g ${K("drop",(.06+i*.07).toFixed(2),.28,`--sx:${(i-2)*-2};--sy:-52;`)}><g transform="rotate(90)">${ARW}</g></g></g>`).join("")+IMP("#ffe27a","fxGold",.6,14,10)+ring(10,"#fff6c8",1.6,.6,.4)+bits(f,5,S_STAR,.6,.4,12,-10)),
+fireball:(f,x,y,x2,y2)=>TR(x,y,glow("fxFire",8,0,.25))+proj(x,y,x2,y2,`<path d="M-3 0Q-11 -4 -19 0Q-11 4 -3 0Z" fill="#ff7a2a" fill-opacity=".8"/><path d="M-3 0Q-8 -2 -13 0Q-8 2 -3 0Z" fill="#ffe27a"/><circle r="5.8" fill="url(#fxFire)"/><circle r="2.4" fill="#fff6c8"/>`,0,.4)+TR(x2,y2,IMP("#ffb04a","fxFire",.4,18,10)+ring(11,"#ff5a2a",1.6,.42,.45)+bits(f,6,S_EMBER,.4,.55,14,-14)),
+meteor:(f,x,y,x2,y2,V)=>{
+  const cs=f.cells||[[f.x,f.y]];
+  let s=TR(x,y,`<g ${K("drop",0,.45,"--sx:-42;--sy:-84;")}><path d="M-3 -1L-17 -34L2.5 -3Z" fill="#ff8a2a"/><path d="M-1.5 -1L-9 -22L1 -2Z" fill="#ffe27a"/><circle r="9" fill="url(#fxFire)"/><circle r="3.6" fill="#6a3424" stroke="#ff8a2a" stroke-width="1"/><circle cx="-1" cy="-1" r=".9" fill="#3a1c12"/></g>`);
+  cs.forEach((c,i)=>{s+=TR(V(c[0])*10+5,V(c[1])*10+5,glow("fxFire",i?13:15,.45,.4)+rays(8,2,i?10:12,"#ffb04a",1.2,.45,.35)+bits(f,3,S_EMBER,.46,.5,9,-10,i*5))});
+  return s+TR(x,y,ring(14,"#fff6c8",1.8,.45,.35)+ring(18,"#ff7a2a",1.6,.5,.45)+glow("fxWhite",20,.44,.18));
+},
+aura:(f,x,y)=>TR(x,y,glow("fxFire",17,0,.55)+ring(10,"#ff9a3c",1.8,0,.5)+ring(10,"#ffd25a",1.1,.12,.5)+ring(10,"#ff5a2a",1.3,.26,.55)+`<g ${K("spin",0,.85,"--rot:220deg;")}>`+[0,1,2,3,4,5,6,7].map(i=>{const a=i*45,t=a*Math.PI/180;return `<path d="${FL}" transform="translate(${(11*Math.cos(t)).toFixed(1)} ${(11*Math.sin(t)).toFixed(1)}) rotate(${a+90}) scale(.55)" fill="#ff9a3c"/>`}).join("")+`</g>`),
+blast:(f,x,y,x2,y2)=>TR(x2,y2,glow("fxWhite",13,.05,.4)+ring(6,"#ffd25a",2,.08,.4)+ring(6,"#fff",1,.2,.4)+rays(8,4,12,"#fff0b0",1.4,.12,.35)+`<path d="${SHL}" fill="url(#gSteel)" stroke="#ffd25a" stroke-width="1.2" ${K("burst",.05,.5)}/>`),
+rejuv:(f,x,y,x2,y2)=>{
+  let s="";if(Math.hypot(x2-x,y2-y)>3)for(let i=0;i<3;i++)s+=proj(x,y,x2,y2,S_LEAF,i*.07,.3);
+  return s+TR(x2,y2,glow("fxGreen",15,.28,.6)+ring(8,"#7fe08a",1.4,.3,.5)+bits(f,6,S_LEAF,.3,.55,12,-18)+bits(f,3,S_PLUS,.4,.5,10,-20,7));
+},
+light:(f,x,y,x2,y2)=>TR(x2,y2,`<rect x="-6" y="-70" width="12" height="70" fill="url(#fxBeam)" ${K("beam",.05,.7)}/>`+glow("fxGold",16,.08,.7)+ring(9,"#ffd25a",1.5,.1,.5)+ring(9,"#fff6c8",1,.3,.5)+bits(f,7,S_STAR,.12,.6,13,-24)),
+dagger:(f,x,y,x2,y2)=>TR(x2,y2,`<path pathLength="1" d="M-7 -7L7 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" ${K("draw",.05,.28)}/><path pathLength="1" d="M7 -7L-7 7" fill="none" stroke="#cfe4ff" stroke-width="2" stroke-linecap="round" ${K("draw",.22,.28)}/>`+glow("fxWhite",9,.2,.4)+rays(6,2,8,"#e8f0ff",1,.22,.35)),
+daggerB:(f,x,y,x2,y2)=>FXR.dagger(f,x,y,x2,y2)+TR(x2,y2,bits(f,7,S_DROP,.22,.5,6,12,3,"fall")+rays(8,3,10,"#ff4a5a",1.1,.22,.35)),
+dash:(f,x,y,x2,y2)=>{
+  let s=TR(x,y,glow("fxSmoke",9,0,.4));
+  for(let i=0;i<5;i++){const t=i/5,px=x+(x2-x)*t,py=y+(y2-y)*t,a=(i*.07).toFixed(2);s+=TR(px,py,`<circle r="4.4" fill="#6a5fa0" ${K("fade",a,.4)}/><circle r="2" fill="#c8bfff" ${K("fade",a,.4)}/>`)}
+  s+=`<path pathLength="1" d="M${x.toFixed(1)} ${y.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" fill="none" stroke="#bfb4ff" stroke-width="1.6" stroke-linecap="round" ${K("draw",0,.4)}/>`;
+  return s+TR(x2,y2,glow("fxSmoke",10,.35,.5)+rays(6,3,9,"#d8d0ff",1,.35,.35));
+},
+tele:(f,x,y,x2,y2)=>TR(x,y,glow("fxPurple",14,0,.45)+ring(8,"#c58bff",1.4,0,.4)+bits(f,5,S_STARP,0,.45,10,-14))+`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#c58bff" stroke-width=".8" stroke-dasharray="1.5 2.5" ${K("fade",.05,.5)}/>`+TR(x2,y2,glow("fxPurple",15,.35,.5)+ring(8,"#c58bff",1.4,.35,.45)+rays(8,2,11,"#e6c8ff",1.2,.35,.35)+bits(f,6,S_STARP,.38,.5,11,-16,4)),
+smoke:(f,x,y)=>TR(x,y,glow("fxWhite",10,0,.3)+[0,1,2,3,4,5,6].map(i=>{const a=i*.9+rd(f,i)*.5,r=2+rd(f,i+4)*3;return `<g transform="translate(${(Math.cos(a)*r).toFixed(1)} ${(Math.sin(a)*r).toFixed(1)})"><circle r="${(4+rd(f,i+8)*2.5).toFixed(1)}" fill="url(#fxSmoke)" ${K("puff",(i*.05).toFixed(2),.7,`--dx:${(Math.cos(a)*6).toFixed(1)};--dy:${(Math.sin(a)*5-3).toFixed(1)};`)}/></g>`}).join(""),f.sz||1),
+lightning:(f,x,y,x2,y2)=>{
+  const d=zig(f,x,y,x2,y2),fk=zig(f,(x+x2)/2,(y+y2)/2,(x+x2)/2+(rd(f,50)-.5)*16,(y+y2)/2+(rd(f,51)-.5)*16,20,1.4);
+  return `<g ${K("flick",0,.7)}><path pathLength="1" d="${d}" fill="none" stroke="#ffe84d" stroke-opacity=".45" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" ${K("draw",.02,.45)}/><path pathLength="1" d="${d}" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ${K("draw",.02,.45)}/><path pathLength="1" d="${fk}" fill="none" stroke="#fff6a0" stroke-width="1" stroke-linecap="round" ${K("draw",.1,.4)}/></g>`+TR(x,y,glow("fxGold",7,0,.3))+TR(x2,y2,glow("fxGold",13,.2,.45)+rays(8,2,10,"#fff6a0",1.2,.22,.35)+ring(6,"#ffe84d",1.2,.22,.4));
+},
+strike:(f,x,y,x2,y2)=>{
+  const d=zig(f,x2,y2-70,x2,y2,5,3.2);
+  return TR(x,y,glow("fxGold",8,0,.3))+`<g ${K("flick",.02,.55)}><path pathLength="1" d="${d}" fill="none" stroke="#ffe84d" stroke-opacity=".45" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" ${K("draw",.02,.3)}/><path pathLength="1" d="${d}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${K("draw",.02,.3)}/></g>`+`<rect x="${(x2-5).toFixed(1)}" y="${(y2-5).toFixed(1)}" width="10" height="10" fill="#fff" ${K("flash",.14,.25)}/>`+TR(x2,y2,glow("fxGold",18,.14,.45)+ring(10,"#ffe84d",1.8,.14,.45)+rays(10,3,14,"#fff6a0",1.4,.14,.35)+bits(f,4,S_STAR,.16,.5,10,-12));
+},
+potion:(f,x,y,x2,y2)=>{
+  const ally=f.ally,c=ally?"#7be39a":"#b46bff",L=Math.hypot(x2-x,y2-y);
+  const flask=`<path d="M-1.4 -5H1.4V-2.6C4 -1.2 4.6 3 3 4.6C1.5 6 -1.5 6 -3 4.6C-4.6 3 -4 -1.2 -1.4 -2.6Z" fill="${c}" stroke="#1a1626" stroke-width=".6"/><rect x="-1.7" y="-6.8" width="3.4" height="2" rx=".5" fill="#8a5a2b"/><ellipse cx="-1.3" cy="2" rx=".9" ry="1.5" fill="#fff" fill-opacity=".55"/>`;
+  const fly=`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g ${K("arcx",0,.4,`--dx:${(x2-x).toFixed(1)};`)}><g ${K("arcy",0,.4,`--dy:${(y2-y).toFixed(1)};--ah:${(8+L*.18).toFixed(1)};`)}>${flask}</g></g></g>`;
+  return fly+(ally
+    ?TR(x2,y2,glow("fxGreen",14,.4,.55)+ring(8,"#7fe08a",1.4,.4,.5)+bits(f,6,S_BUB,.4,.55,11,-16)+bits(f,3,S_PLUS,.45,.5,9,-18,6))
+    :TR(x2,y2,glow("fxPoison",15,.4,.55)+bits(f,5,S_PCLOUD,.4,.55,8,-3,11,"puff")+bits(f,6,S_PBUB,.42,.55,11,-14)+rays(7,3,10,"#9be04a",1,.4,.3)));
+},
+swirl:(f,x,y)=>TR(x,y,glow("fxWhite",11,0,.4)+[0,1,2].map(i=>`<ellipse cy="${3-i*3.2}" rx="${9-i*1.5}" ry="2.6" fill="none" stroke="#dff6ff" stroke-width="1.2" ${K("pulse",(i*.1).toFixed(2),.5)}/>`).join("")+`<g ${K("spin",0,.85,"--rot:360deg;")}><path d="M-9 2A9 3 0 0 1 9 2M-6 -3A6 2.2 0 0 0 6 -3" fill="none" stroke="#bfe8ff" stroke-width="1.3" stroke-linecap="round"/></g>`+bits(f,6,S_LEAF,.1,.55,12,-14,2)),
+block:(f,x,y)=>TR(x,y,glow("fxWhite",12,0,.4)+rays(8,5,12,"#fff",1.2,0,.35)+ring(7,"#ffd25a",1.5,.05,.4)+`<path d="${SHL}" fill="url(#gSteel)" stroke="#ffd25a" stroke-width="1.2" ${K("burst",0,.55)}/>`),
+hit:(f,x,y)=>{const m={fire:["#ffb04a","fxFire"]}[f.v]||["#fff","fxWhite"];return TR(x,y,IMP(m[0],m[1],0,12,8))},
+tick:(f,x,y)=>TR(x,y,f.v==="bleed"?bits(f,4,S_DROP,0,.7,7,8,1,"fall"):f.v==="poison"?glow("fxPoison",11,0,.6)+bits(f,5,S_PBUB,0,.7,9,-12):f.v==="burn"?glow("fxFire",10,0,.5)+bits(f,4,S_EMBER,0,.7,8,-12):glow("fxGreen",11,0,.6)+bits(f,3,S_PLUS,0,.7,8,-14)),
+num:(f,x,y)=>`<text x="${x.toFixed(1)}" y="${(y-2).toFixed(1)}" text-anchor="middle" font-size="6.2" font-weight="800" fill="${f.c||"#fff"}" stroke="#000" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="system-ui,sans-serif" ${K("numt",0,1)}>${esc(f.e)}</text>`
+};
+/* ---------- extra effects for the dragon and the knight ---------- */
+Object.assign(FXD,{claws:1100,breath:1500,asteroid:2000,gsword:1200,leap:1600});
+Object.assign(FXH,{claws:150,breath:560,asteroid:1320,gsword:220,leap:670});
+const S_SMK=`<circle r="4" fill="url(#fxSmoke)"/>`;
+const WING=`<path d="M0 0C-6 -10 -16 -12 -26 -8C-22 -4 -20 0 -18 4C-14 3 -10 3 -8 6C-6 4 -3 2 0 0Z" fill="#ff4a3a" fill-opacity=".55" stroke="#ff9a7a" stroke-width=".8"/>`;
+Object.assign(FXR,{
+claws:(f,x,y,x2,y2)=>TR(x2,y2,[-3.5,0,3.5].map((o,i)=>{const a=(.04+i*.07).toFixed(2),d=`M${-8+o} -9Q${-1+o} -1 ${6+o} 9`;return `<path pathLength="1" d="${d}" fill="none" stroke="#ff3a2a" stroke-opacity=".55" stroke-width="3.2" stroke-linecap="round" ${K("draw",a,.4)}/><path pathLength="1" d="${d}" fill="none" stroke="#ffe0d0" stroke-width="1.2" stroke-linecap="round" ${K("draw",a,.4)}/>`}).join("")+glow("fxFire",11,.2,.4)+bits(f,6,S_DROP,.22,.5,7,12,3,"fall")+rays(6,3,9,"#ff6a4a",1,.22,.3)),
+breath:(f,x,y,x2,y2)=>{
+  let s=TR(x,y,glow("fxFire",9,0,.3));
+  for(let i=0;i<7;i++)s+=proj(x,y,x2,y2,`<g transform="scale(${(.7+i*.12).toFixed(2)})"><circle r="4.5" fill="url(#fxFire)"/><path d="${FL}" transform="rotate(90) scale(.7)" fill="#ffb04a"/></g>`,(i*.05).toFixed(2),.34);
+  return s+TR(x2,y2,IMP("#ffb04a","fxFire",.4,18,10)+ring(11,"#ff5a2a",1.6,.42,.45)+bits(f,6,S_EMBER,.4,.55,14,-14)+bits(f,3,S_EMBER,.5,.5,10,-18,7));
+},
+asteroid:(f,x,y,x2,y2)=>{
+  const L=Math.hypot(x2-x,y2-y),ah=(10+L*.2).toFixed(1);
+  let s=TR(x,y,`<g ${K("burst",0,.32)}>${WING}<g transform="scale(-1 1)">${WING}</g></g>`+glow("fxFire",9,0,.3));
+  // the dragon crosses the board as a glowing red shape with faint wings
+  s+=`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g ${K("arcx",.28,.34,`--dx:${(x2-x).toFixed(1)};`)}><g ${K("arcy",.28,.34,`--dy:${(y2-y).toFixed(1)};--ah:${ah};`)}><circle r="8" fill="url(#fxFire)"/><g transform="scale(.6)">${WING}<g transform="scale(-1 1)">${WING}</g></g><ellipse rx="3" ry="4" fill="#5a0e0a" stroke="#ff6a4a" stroke-width=".6"/></g></g></g>`;
+  let t=glow("fxFire",20,.64,.3)+ring(12,"#ff6a4a",2.2,.64,.34)+ring(8,"#ffe27a",1.4,.68,.3)
+   +`<g ${K("spin",.64,.3,"--rot:360deg;")}><path d="M13 0A13 13 0 0 1 0 13" fill="none" stroke="#ff3a2a" stroke-width="3.4" stroke-linecap="round"/><path d="M-13 0A13 13 0 0 1 0 -13" fill="none" stroke="#ff9a3c" stroke-width="2.6" stroke-linecap="round"/><path d="M0 13A13 13 0 0 1 -13 0" fill="none" stroke="#ffd25a" stroke-width="1.6" stroke-linecap="round"/></g>`
+   +bits(f,6,S_EMBER,.66,.5,14,-12);
+  ADJ.forEach((d,i)=>{t+=`<g transform="translate(${d[0]*10} ${d[1]*10})">${glow("fxFire",7,.7+(i%2)*.02,.3)}</g>`});
+  return s+TR(x2,y2,t);
+},
+gsword:(f,x,y,x2,y2)=>TR(x2,y2,`<path pathLength="1" d="M-9 -10Q6 -4 9 10" fill="none" stroke="#9fc4ff" stroke-opacity=".55" stroke-width="6" stroke-linecap="round" ${K("draw",.04,.45)}/><path pathLength="1" d="M-9 -10Q6 -4 9 10" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" ${K("draw",.04,.45)}/>`+glow("fxWhite",13,.2,.45)+ring(7,"#cfe4ff",2,.2,.4)+rays(8,3,12,"#fff",1.2,.2,.35)+bits(f,4,S_STAR,.22,.5,10,-10)),
+leap:(f,x,y,x2,y2,V)=>{
+  const px=V(f.px)*10+5,py=V(f.py)*10+5,L=Math.hypot(x2-x,y2-y),ah=(10+L*.2).toFixed(1);
+  const body=`<circle r="7" fill="url(#fxWhite)"/><path d="M-3 -4L3 -4L4 4L0 7L-4 4Z" fill="url(#gSteel)" stroke="#fff" stroke-width=".5"/>`;
+  return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g ${K("arcx",0,.4,`--dx:${(x2-x).toFixed(1)};`)}><g ${K("arcy",0,.4,`--dy:${(y2-y).toFixed(1)};--ah:${ah};`)}>${body}</g></g></g>`
+   +`<path pathLength="1" d="M${x2.toFixed(1)} ${y2.toFixed(1)}L${px.toFixed(1)} ${py.toFixed(1)}" fill="none" stroke="#cfe4ff" stroke-width="2.2" stroke-linecap="round" ${K("draw",.42,.3)}/>`
+   +TR(x2,y2,glow("fxWhite",17,.42,.4)+ring(8,"#fff",2,.42,.4)+ring(12,"#ffd25a",1.4,.46,.45)+rays(10,3,13,"#fff0b0",1.4,.42,.35)+bits(f,4,S_SMK,.44,.5,10,-6,5,"puff"))
+   +TR(px,py,ring(5,"#ffe27a",1,.5,.4)+bits(f,3,S_STAR,.5,.5,8,-10));
+}
+});
+
+function addFx(o){
+  o.dur=o.dur||FXD[o.type]||1200;o.x2=o.x2===undefined?o.x:o.x2;o.y2=o.y2===undefined?o.y:o.y2;
+  if(onlineGame&&!applyingRemoteState){fxOut.push({...o});if(fxOut.length>60)fxOut.shift()}
+  o.t0=Date.now();FX.push(o);setTimeout(()=>{FX=FX.filter(f=>f!==o)},o.dur+(o.dl||0)+150);
+}
+const num=(t,txt,c)=>addFx({type:"num",x:t.x,y:t.y,e:txt,c,dl:FXLAG});
+function fxHTML(){
+  // Player 2 sees the board rotated 180deg, so effect coordinates are rotated the same way.
+  const n=Date.now(),flip=onlineGame&&onlineMyTeam===1,V=v=>flip?9-v:v,my=onlineGame?onlineMyTeam:0;
+  return `<svg class="fxs" viewBox="0 0 100 100" aria-hidden="true">`+FX.filter(f=>!f.hid||f.team===my).map(f=>{
+    const r=FXR[f.type];if(!r)return "";
+    return `<g style="--d:${f.dur}ms;--dl:${Math.round((f.dl||0)-(n-f.t0))}ms">${r(f,V(f.x)*10+5,V(f.y)*10+5,V(f.x2)*10+5,V(f.y2)*10+5,V)}</g>`;
+  }).join("")+`</svg>`;
+}
+function showFx(u,s,T){
+  if(!T||!s.v)return;
+  addFx({type:s.v,x:u.x,y:u.y,x2:T.x,y2:T.y});
+}
+$("rot").innerHTML=ICON("rotate")+"กรุณาหมุนจอเป็นแนวนอน";
+
+/* ---------- setup ---------- */
+function setup(){
+  const tot=pick.reduce((a,k)=>a+R[k].pop,0);
+  const online=onlineGame;
+  $("su").style.display="flex";
+  $("su").innerHTML=`<h2 style="margin:0">${ICON("swords")} Board Arena</h2><div class="mu">${online?"เลือกกองกำลังของคุณ · อีกฝ่ายจะเลือกกองกำลังของตนเอง":"เลือกตัวหมาก (ห้ามซ้ำ) population รวมไม่เกิน "+CAP+" แล้วสู้กับบอท"}</div>
+  <div class="opts">${KEYS.map(k=>`<button class="opt ${pick.includes(k)?"on":""}" data-k="${k}">${shape(k,0)}<b>${R[k].n}</b><br><small class="mu">${RAR[R[k].rar]} · HP ${R[k].hp} · Pop ${R[k].pop}</small></button>`).join("")}</div>
+  <div><b>Population ${tot}/${CAP}</b></div>
+  <div id="pickWait" class="mu">${online?"เมื่อยืนยันแล้วจะรออีกฝ่ายเลือกตัวละคร":""}</div>
+  <button class="m" id="go" ${pick.length&&!onlineSubmitted?"":"disabled"} style="padding:10px 22px;font-size:16px">${online?"ยืนยันตัวละคร":"เริ่มเกม"}</button>`;
+  if(onlineSubmitted){$("pickWait").textContent="ยืนยันกองกำลังแล้ว กำลังรออีกฝ่าย...";$("go").textContent="รออีกฝ่าย";}
+  $("su").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{
+    if(onlineSubmitted)return;
+    const k=b.dataset.k;
+    if(pick.includes(k))pick=pick.filter(x=>x!==k);
+    else if(tot+R[k].pop<=CAP)pick.push(k);
+    setup();
+  });
+  $("go").onclick=()=>{
+    if(online){if(!pick.length||onlineSubmitted)return;onlineSubmitted=true;setup();onlineSocket.emit("submit_pick",{roomCode:onlineRoom,picks:pick});}
+    else start();
+  };
+}
+const spread=n=>n===1?[4]:Array.from({length:n},(_,i)=>Math.round(1+i*8/(n-1)));
+function mk(k,team,x,y){return{id:nid++,k,team,x,y,hp:R[k].hp,sh:0,cd:R[k].s.map(()=>0),aura:0,ww:0,fly:R[k].pf?1:0,tpUsed:false,stunned:false,st:{poison:0,burn:0,bleed:0,stun:0,freeze:0,silent:0,regen:null}}}
+function start(){
+  U=[];over=-1;nid=1;msg="";FX=[];
+  let c=spread(pick.length);pick.forEach((k,i)=>U.push(mk(k,0,c[i],9)));
+  const ks=[...KEYS].sort(()=>Math.random()-.5),n=3+Math.floor(Math.random()*3),en=[];let pop=0;
+  for(const k of ks){if(en.length>=n)break;if(pop+R[k].pop<=CAP){en.push(k);pop+=R[k].pop}}
+  c=spread(en.length);en.forEach((k,i)=>U.push(mk(k,1,c[i],0)));
+  $("su").style.display="none";
+  begin(0);
+}
+
+/* ---------- rules ---------- */
+function loseHP(t,d){
+  const a=Math.min(t.sh,d);t.sh-=a;t.hp-=d-a;
+  num(t,"-"+d,"#ff5a66");
+  if(d>0&&t.ww>0)exitWW(t);
+  if(t.hp<=0){U=U.filter(x=>x!==t);if(sel===t.id)sel=null;if(!U.some(x=>x.team===t.team))over=1-t.team}
+}
+function heal(t,a,cure){
+  t.hp=Math.min(R[t.k].hp,t.hp+a);num(t,"+"+a,"#43c07a");
+  if(cure){t.st.bleed=0;t.st.poison=0}
+}
+function hurt(src,t,s,d){
+  if(!canHit(s,t)){
+    if(U.includes(t)&&t.st.freeze<1&&isRanged(s)&&R[t.k].rangedGroundImmune&&!(t.fly>0))msg=R[t.k].n+" อยู่บนพื้น โดนระยะไกลไม่ได้";
+    return false;
+  }
+  const rule=(R[t.k].blk||[]).find(b=>b.c.includes(s.c)&&b.l.includes(s.l)&&(!b.tg||b.tg===s.tg)&&Math.random()<b.p);
+  if(rule){addFx({type:"block",x:t.x,y:t.y});msg=R[t.k].n+" กันการโจมตีได้!";return false}
+  // damage modifiers multiply: kingdom sword vs dragon/spirit/legend, ranged vs a flying dragon, element resistance
+  let m=1;const T=R[t.k];
+  if(hasT(s,"kingdom")&&unitTags(t).some(g=>["dragon","spirit","legend"].includes(g)))m*=1.5;
+  if(isRanged(s)&&T.flyRangedMul&&t.fly>0)m*=T.flyRangedMul;
+  if(T.res)(s.tags||[]).forEach(g=>{if(T.res[g]!==undefined)m*=T.res[g]});
+  d=Math.max(0,Math.round(d*m));
+  msg=R[src.k].n+" ใช้ "+s.n+" ใส่ "+R[t.k].n+" -"+d;
+  loseHP(t,d);
+  return true;
+}
+function exitWW(u){
+  u.ww=0;
+  const w=R[u.k].s.findIndex(x=>x.k==="w");if(w>=0)u.cd[w]=R[u.k].s[w].cd;
+  if(u.tpUsed){const m=R[u.k].s.findIndex(x=>x.k==="m");if(m>=0)u.cd[m]=1}
+  u.tpUsed=false;addFx({type:"smoke",x:u.x,y:u.y,sz:.8});
+}
+function land(u){
+  u.fly=0;
+  const f=R[u.k].s.findIndex(x=>x.k==="f");if(f>=0)u.cd[f]=R[u.k].s[f].cd;
+  addFx({type:"swirl",x:u.x,y:u.y,dur:1000});
+}
+function tick(u,s){
+  addFx({type:"aura",x:u.x,y:u.y});
+  FXLAG=320;
+  U.filter(e=>e.team!==u.team&&dist(u,e)===1).forEach(e=>{if(over<0){addFx({type:"hit",v:"fire",x:e.x,y:e.y,dl:300});hurt(u,e,s,s.d)}});
+  FXLAG=0;
+}
+function begin(t){
+  turn=t;sel=null;mode=-1;P[t]={mp:2,ap:2};
+  U.filter(u=>u.team===t).forEach(u=>{
+    if(!U.includes(u)||over>=0)return;
+    u.cd=u.cd.map(c=>Math.max(0,c-1));
+    u.stunned=u.st.stun>0;u.st.stun=0;
+    if(u.st.regen){addFx({type:"tick",v:"regen",x:u.x,y:u.y});heal(u,u.st.regen.amt);u.st.regen.left--;if(u.st.regen.left<=0)u.st.regen=null}
+    if(u.st.bleed>0&&U.includes(u)){addFx({type:"tick",v:"bleed",x:u.x,y:u.y});loseHP(u,2);u.st.bleed--}
+    if(u.st.poison&&U.includes(u)){addFx({type:"tick",v:"poison",x:u.x,y:u.y});loseHP(u,u.st.poison)}
+    if(u.st.burn&&U.includes(u)){addFx({type:"tick",v:"burn",x:u.x,y:u.y});loseHP(u,2*u.st.burn);u.st.burn--}
+    if(!U.includes(u)||over>=0)return;
+    if(u.aura>0){u.aura--;tick(u,R[u.k].s.find(x=>x.k==="s"))}
+    if(u.ww>0){u.ww--;if(u.ww===0)exitWW(u)}
+    if(R[u.k].pf)u.fly=1;else if(u.fly>0){u.fly--;if(u.fly===0)land(u)}
+  });
+  render();
+  if(onlineGame){broadcastGameState();}
+  else if(t===1&&over<0)setTimeout(bot,600);
+}
+function usable(u,si){
+  const s=eff(u,si),p=P[u.team];
+  if(turn!==u.team||over>=0||u.cd[si]>0||dis(u)||u.st.silent>0)return false;
+  if(s.k==="m"?p.mp<1:p.ap<1)return false;
+  if(s.k==="w"&&u.ww>0)return false;
+  if(s.k==="f"&&u.fly>0)return false;
+  if(s.fl&&!(u.fly>0))return false;
+  if(s.tp&&u.tpUsed)return false;
+  return true;
+}
+function targetable(e){return !(e.ww>0)&&!(e.st.freeze>0)}
+function targetsFor(u,si){
+  const s=eff(u,si),d=e=>dist(u,e);
+  if(s.k==="t")return U.filter(e=>e.team!==u.team&&targetable(e)&&d(e)>=1&&d(e)<=s.r&&canHit(s,e));
+  if(s.k==="L")return U.filter(e=>e.team!==u.team&&targetable(e)&&d(e)>=1&&d(e)<=s.r&&canHit(s,e)&&pushCell(u,e));
+  if(s.k==="p")return U.filter(e=>e.st.freeze<1&&d(e)<=s.r&&(e.team===u.team||(targetable(e)&&d(e)>=1)));
+  if(s.k==="h"||s.k==="r")return U.filter(e=>e.team===u.team&&e.st.freeze<1&&d(e)<=s.r);
+  return[];
+}
+function mcells(u,s){
+  const r=[];
+  for(let x=0;x<10;x++)for(let y=0;y<10;y++)
+    if(!at(x,y)&&(s.tp||Math.max(Math.abs(x-u.x),Math.abs(y-u.y))<=s.r))r.push([x,y]);
+  return r;
+}
+function moves(u){
+  const m=(u.fly>0&&!R[u.k].pf)?2:R[u.k].mv,r=[];
+  if(turn!==u.team||P[u.team].mp<1||dis(u))return r;
+  for(let x=u.x-m;x<=u.x+m;x++)for(let y=u.y-m;y<=u.y+m;y++)
+    if(x>=0&&y>=0&&x<10&&y<10&&!at(x,y))r.push([x,y]);
+  return r;
+}
+function cast(u,si,tx,ty){
+  const s=eff(u,si),T=at(tx,ty);
+  if(s.k==="m")P[u.team].mp--;else P[u.team].ap--;
+  u.cd[si]=(s.k==="w"||s.k==="f")?0:s.cd;
+  FXLAG=FXH[s.v]||0;
+  if(s.k==="t"){
+    showFx(u,s,T);
+    const ok=hurt(u,T,s,s.d);
+    if(s.chain&&over<0){
+      const cs=U.filter(e=>e.team!==u.team&&e!==T&&targetable(e));
+      if(cs.length){
+        const m=Math.min(...cs.map(e=>dist(T,e))),c=cs.filter(e=>dist(T,e)===m),z=c[Math.floor(Math.random()*c.length)];
+        FXLAG=(FXH.lightning||0)+380;
+        addFx({type:"lightning",x:T.x,y:T.y,x2:z.x,y2:z.y,dl:380});hurt(u,z,s,s.d);
+      }
+    }
+    // status effects only land when the hit itself landed (not parried, not blocked)
+    if(ok&&U.includes(T)){
+      if(s.bleed)T.st.bleed=Math.max(T.st.bleed,s.bleed);
+      if(s.burn)T.st.burn+=s.burn;
+      if(s.stunP&&Math.random()<s.stunP)T.st.stun=Math.max(T.st.stun,s.stun||1);
+    }
+    if(s.xww)exitWW(u);
+  }else if(s.k==="L"){
+    const pc=pushCell(u,T),ox=T.x,oy=T.y;
+    addFx({type:"leap",x:u.x,y:u.y,x2:ox,y2:oy,px:pc[0],py:pc[1]});
+    T.x=pc[0];T.y=pc[1];u.x=ox;u.y=oy;
+    const ok=hurt(u,T,s,s.d);
+    if(ok&&U.includes(T))T.st.stun=Math.max(T.st.stun,s.stun||1);
+  }else if(s.k==="j"){
+    addFx({type:"asteroid",x:u.x,y:u.y,x2:tx,y2:ty});
+    u.x=tx;u.y=ty;
+    ADJ.forEach(d=>{const t=at(tx+d[0],ty+d[1]);if(t&&t.team!==u.team&&over<0)hurt(u,t,s,s.d)});
+  }else if(s.k==="a"){
+    const cs=CR.map(d=>[tx+d[0],ty+d[1]]).filter(c=>c[0]>=0&&c[1]>=0&&c[0]<10&&c[1]<10);
+    addFx({type:"meteor",x:tx,y:ty,cells:cs});
+    cs.forEach(c=>{const t=at(c[0],c[1]);if(t&&over<0)hurt(u,t,s,s.d)});
+  }else if(s.k==="s"){u.sh+=s.sh;u.aura=2;tick(u,s)}
+  else if(s.k==="h"){addFx({type:"rejuv",x:u.x,y:u.y,x2:T.x,y2:T.y});heal(T,s.heal,true);msg=R[u.k].n+" ฟื้นฟู "+R[T.k].n}
+  else if(s.k==="r"){addFx({type:"light",x:u.x,y:u.y,x2:T.x,y2:T.y});heal(T,s.heal,false);T.st.regen={left:2,amt:s.heal};msg=R[u.k].n+" ใช้ "+s.n+" กับ "+R[T.k].n}
+  else if(s.k==="p"){
+    const ally=T.team===u.team;
+    addFx({type:"potion",x:u.x,y:u.y,x2:T.x,y2:T.y,ally:ally?1:0});
+    if(ally){T.st.regen={left:2,amt:3};msg=R[u.k].n+" ให้ยาฟื้นฟู "+R[T.k].n}
+    else{T.st.poison++;msg=R[u.k].n+" ทำให้ "+R[T.k].n+" ติดพิษ"}
+  }else if(s.k==="m"){
+    // A unit that is invisible must not reveal where it went to the opponent.
+    const H=u.ww>0?{hid:1,team:u.team}:{};
+    addFx({type:s.tp?"tele":"dash",x:u.x,y:u.y,x2:tx,y2:ty,...H});
+    u.x=tx;u.y=ty;if(s.tp)u.tpUsed=true;
+  }else if(s.k==="w"){u.ww=4;addFx({type:"smoke",x:u.x,y:u.y});msg=R[u.k].n+" หายตัว (Wind-Walk)"}
+  else if(s.k==="f"){u.fly=4;addFx({type:"swirl",x:u.x,y:u.y});msg=R[u.k].n+" ขึ้นบิน"}
+  // a permanently flying unit lands after using any skill, until its own next turn
+  if(R[u.k].pf&&u.fly>0&&U.includes(u)){u.fly=0;addFx({type:"smoke",x:u.x,y:u.y,sz:.6,dl:s.k==="j"?1300:350})}
+  FXLAG=0;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const meTeam=onlineGame?onlineMyTeam:0,enemyTeam=1-meTeam;
+  const vis=U.filter(u=>!hidden(u)),me=vis.filter(u=>u.team===meTeam),en=vis.filter(u=>u.team===enemyTeam),u=sel?byId(sel):null;
+  const mv=u&&mode<0?moves(u):[];
+  const sk=u&&mode>=0?eff(u,mode):null;
+  const tg=sk&&["t","p","h","r","L"].includes(sk.k)?targetsFor(u,mode):[];
+  const mc=sk&&["m","j"].includes(sk.k)?mcells(u,sk):[];
+  const rows=a=>a.map(x=>`<div class="row ${x.team!==meTeam?"e":""} ${sel===x.id?"s":""}" data-r="${x.id}">${shape(x.k,x.team!==meTeam?1:0)}<div class="bar"><i style="width:${Math.max(0,x.hp)/R[x.k].hp*100}%"></i></div><small>${x.hp}</small></div>`).join("");
+  let cells="";
+  for(let vy=0;vy<10;vy++)for(let vx=0;vx<10;vx++){
+    const x=onlineGame&&meTeam===1?9-vx:vx,y=onlineGame&&meTeam===1?9-vy:vy;
+    const p0=at(x,y),p=p0&&!hidden(p0)?p0:null,isMv=mv.some(m=>m[0]===x&&m[1]===y);
+    const cl=p&&tg.includes(p)?(p.team===meTeam?"al":"at"):"";
+    let inner="";
+    if(p){
+      const ex=[p.team===meTeam&&p.ww>0?"ghost":"",p.fly>0?"fly":"",p.aura>0?"aura":"",p.st.freeze>0?"frz":""].join(" "),ic=icons(p);
+      inner=shape(p.k,p.team!==meTeam?1:0,ex)+`<div class="hb"><i style="width:${Math.max(0,p.hp)/R[p.k].hp*100}%"></i></div>${p.sh?`<span class="sb">${p.sh}</span>`:""}${ic?`<span class="stb">${ic}</span>`:""}`;
+    }
+    cells+=`<div class="cell ${(vx+vy)%2?"k":""} ${isMv?"mv":""} ${mc.some(c=>c[0]===x&&c[1]===y)?"mc":""} ${sk&&sk.k==="a"?"am":""} ${cl} ${p&&p.id===sel?"sel":""}" data-x="${x}" data-y="${y}">${inner}</div>`;
+  }
+  let panel=`<div class="mu" style="text-align:center;margin-top:30%">แตะตัวหมากของคุณ<br>เพื่อดูข้อมูลและสกิล</div>`;
+  if(u&&u.team===meTeam){
+    const d=R[u.k],ic=icons(u),stx=[ic,u.ww>0?"Wind-Walk":"",u.fly>0?ICON("wing")+" บิน":"",d.pf&&!(u.fly>0)?"ลงพื้น (โดนระยะไกลไม่ได้)":"",u.aura?"ออร่าเหลือ "+u.aura+" ครั้ง":""].filter(Boolean).join(" ");
+    let skills="";
+    if(u.st.silent>0)skills=`<div class="ps" style="font-size:1.1em;text-align:center">${ICON("silent")} ถูกใบ้</div>`;
+    else skills=d.s.map((s0,i)=>{const sk0=eff(u,i);return `<button class="sk ${mode===i?"on":""}" data-s="${i}" ${usable(u,i)?"":"disabled"}><span class="i">${ICON(sk0.i)}</span><span><b>${sk0.n}</b><small>${u.cd[i]>0?"cooldown "+u.cd[i]:info(sk0)}</small>${sk0.x&&u.cd[i]<1?`<small>${sk0.x}</small>`:""}${sk0.tags?`<small class="tg">${sk0.tags.map(g=>TAGN[g]||g).join(" · ")}</small>`:""}</span></button>`}).join("");
+    panel=`<div class="por">${shape(u.k,0)}<div><div class="nm">${d.n}</div><small class="mu">${RAR[d.rar]} · Pop ${d.pop}</small></div></div>
+    <div class="hp">${ICON("heart")}<div class="bar" style="flex:1"><i style="width:${u.hp/d.hp*100}%"></i></div><b>${u.hp}/${d.hp}</b></div>
+    ${u.sh?`<div class="ps">${ICON("shield")} โล่ ${u.sh}</div>`:""}${stx?`<div class="ps">สถานะ: ${stx}</div>`:""}
+    ${dis(u)?`<div class="ps">ใช้ตัวนี้ไม่ได้ในตานี้</div>`:""}
+    ${d.pas?`<div class="ps">✦ ${d.pas}</div>`:""}<hr>${skills}
+    <div class="mu" style="font-size:.8em">แตะช่องฟ้าเพื่อเดิน (หัก MP 1) · ใช้สกิลหัก AP 1</div>`;
+  }else if(u&&!hidden(u)){
+    panel=`<div class="por">${shape(u.k,1)}<div class="nm">${R[u.k].n}</div></div><hr><div class="mu" style="text-align:center">ข้อมูลของฝ่ายตรงข้าม</div>`;
+  }
+  const turnLabel=over>=0?"จบเกม":turn===meTeam?"ตาของคุณ":"ตาฝ่ายตรงข้าม";
+  const endBtns=onlineGame
+    ?`<button class="m" id="again" ${onlineRematchSent?"disabled":""}>${onlineRematchSent?"รออีกฝ่ายตอบรับ...":onlineRematchOpp?"อีกฝ่ายขอเล่นอีกครั้ง · กดเพื่อรับ":"เล่นอีกครั้ง"}</button><button class="m" id="leave" style="background:var(--sf2);color:var(--tx)">ออกจากห้อง</button>`
+    :`<button class="m" id="again">กลับหน้าเลือกตัวละคร</button>`;
+  $("g").innerHTML=`<div class="col left"><div class="mu">ฝ่ายคุณ</div>${rows(me)}<hr><div class="mu">ฝ่ายตรงข้าม</div>${rows(en)}</div>
+  <div class="mid"><div class="top"><b>${turnLabel}</b><span>MP ${P[turn].mp}/2 · AP ${P[turn].ap}/2</span><span class="msg">${esc(msg)}</span><button class="m" id="et" ${turn!==meTeam||over>=0?"disabled":""}>จบเทิร์น</button></div>
+  <div class="bw"><div class="bwrap"><div class="board" id="bd">${cells}</div><div class="fxl">${fxHTML()}</div>${over>=0?`<div class="ov"><div style="font-size:2.2em">${over===meTeam?ICON("trophy")+" คุณชนะ!":ICON("skull")+" ฝ่ายตรงข้ามชนะ"}</div>${endBtns}</div>`:""}</div></div></div>
+  <div class="col right">${panel}</div>`;
+  $("g").querySelectorAll("[data-r]").forEach(r=>r.onclick=()=>choose(+r.dataset.r));
+  $("g").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
+    const si=+b.dataset.s,ss=eff(u,si);
+    if(["s","w","f"].includes(ss.k)){cast(u,si);mode=-1;render();broadcastGameState();}else mode=mode===si?-1:si;
+    render();
+  });
+  $("bd").onclick=e=>{const c=e.target.closest(".cell");if(c)cellClick(+c.dataset.x,+c.dataset.y)};
+  $("et").onclick=()=>{if(turn===meTeam&&over<0)begin(1-meTeam)};
+  const ag=$("again");if(ag)ag.onclick=()=>{
+    if(onlineGame){if(onlineRematchSent||!onlineSocket?.connected)return;onlineRematchSent=true;onlineSocket.emit("request_rematch",{roomCode:onlineRoom});render();}
+    else{pick=[];setup();}
+  };
+  const lv=$("leave");if(lv)lv.onclick=()=>{if(onlineSocket?.connected)onlineSocket.emit("leave_room");backToLobby("ออกจากห้องแล้ว",false);};
+}
+
+function choose(id){sel=id;mode=-1;render()}
+function cellClick(x,y){
+  if(over>=0||turn!==(onlineGame?onlineMyTeam:0))return;
+  const u=sel?byId(sel):null,p0=at(x,y),p=p0&&!hidden(p0)?p0:null,meTeam=onlineGame?onlineMyTeam:0;
+  if(u&&u.team===meTeam){
+    if(mode>=0){
+      const s=eff(u,mode);
+      if(usable(u,mode)){
+        const ok=s.k==="a"||(["m","j"].includes(s.k)&&mcells(u,s).some(c=>c[0]===x&&c[1]===y))||(p&&targetsFor(u,mode).includes(p));
+        if(ok){cast(u,mode,x,y);mode=-1;render();broadcastGameState();return}
+      }
+    }else if(!p0&&moves(u).some(m=>m[0]===x&&m[1]===y)){u.x=x;u.y=y;P[meTeam].mp--;render();broadcastGameState();return}
+  }
+  if(p)return choose(p.id);
+  sel=null;mode=-1;render();
+}
+
+/* ---------- bot ---------- */
+function bot(){
+  (function step(){
+    if(over>=0)return;
+    if(!botAct())return begin(0);
+    render();setTimeout(step,750);
+  })();
+}
+function botAct(){
+  const mine=U.filter(u=>u.team===1),foes=U.filter(u=>u.team===0&&targetable(u));
+  if(!mine.length||!U.some(u=>u.team===0))return false;
+  const p=P[1];
+  if(p.ap>0){
+    let best=null;
+    const cand=(u,si,x,y,sc)=>{if(!best||sc>best.sc)best={u,si,x,y,sc}};
+    mine.forEach(u=>R[u.k].s.forEach((s0,si)=>{
+      if(!usable(u,si))return;
+      const s=eff(u,si);
+      if(s.k==="t")targetsFor(u,si).forEach(t=>cand(u,si,t.x,t.y,s.d+(t.hp<=s.d?20:0)+(s.chain?3:0)));
+      else if(s.k==="a"){
+        for(let x=0;x<10;x++)for(let y=0;y<10;y++){
+          let sc=0;
+          CR.forEach(d=>{const t=at(x+d[0],y+d[1]);if(t&&!(t.team===0&&t.ww>0))sc+=t.team===0?s.d+(t.hp<=s.d?15:0):-s.d-5});
+          if(sc>5)cand(u,si,x,y,sc);
+        }
+      }else if(s.k==="s"){const n=foes.filter(e=>dist(u,e)===1).length;if(n)cand(u,si,0,0,s.d*n+3)}
+      else if(s.k==="L")targetsFor(u,si).forEach(t=>cand(u,si,t.x,t.y,s.d+(t.hp<=s.d?20:0)+2));
+      else if(s.k==="j")mcells(u,s).forEach(c=>{let sc=0;ADJ.forEach(d=>{const t=at(c[0]+d[0],c[1]+d[1]);if(t&&t.team===0&&!(t.fly>0))sc+=s.d});if(sc>0)cand(u,si,c[0],c[1],sc)});
+      else if(s.k==="h")targetsFor(u,si).forEach(t=>{const miss=R[t.k].hp-t.hp;if(miss>=4)cand(u,si,t.x,t.y,Math.min(s.heal,miss)+(t.hp<R[t.k].hp/2?4:0))});
+      else if(s.k==="r")targetsFor(u,si).forEach(t=>{if(R[t.k].hp-t.hp>=10)cand(u,si,t.x,t.y,7)});
+      else if(s.k==="p")targetsFor(u,si).forEach(t=>{if(t.team===0)cand(u,si,t.x,t.y,3+t.st.poison)});
+    }));
+    if(best){cast(best.u,best.si,best.x,best.y);return true}
+  }
+  if(p.mp>0&&foes.length){
+    let b=null;
+    const nd=(x,y)=>Math.min(...foes.map(e=>Math.hypot(e.x-x,e.y-y)));
+    mine.forEach(u=>{const cur=nd(u.x,u.y);moves(u).forEach(m=>{const g=cur-nd(m[0],m[1]);if(g>0.01&&(!b||g>b.g))b={u,m,g}})});
+    if(b){b.u.x=b.m[0];b.u.y=b.m[1];P[1].mp--;return true}
+  }
+  return false;
+}
+
+/* ---------- ONLINE LOBBY ---------- */
+let onlineSocket = null;
+let onlineRoom = null;
+let onlinePlayer = 0;
+let onlineReady = false;
+let onlineStarted = false;
+let onlineGame = false;
+let onlineMyTeam = 0;
+let onlinePicks = [[], []];
+let onlineSubmitted = false;
+let onlineRematchSent = false;
+let onlineRematchOpp = false;
+let onlineEverConnected = false;
+let applyingRemoteState = false;
+
+function lobbyStatus(text){
+  const el=document.getElementById("lobbyStatus");
+  if(el) el.textContent=text;
+}
+function showLobbyRoom(data){
+  onlineRoom=data.roomCode;
+  onlinePlayer=data.playerNumber;
+  document.getElementById("lobbyHome").hidden=true;
+  document.getElementById("lobbyRoom").hidden=false;
+  document.getElementById("roomCodeDisplay").textContent=onlineRoom;
+  updateLobbyPlayers(data.players || []);
+}
+// players = [slot1, slot2]; an empty slot is null. Also keeps the Ready button in sync with what the server knows.
+function updateLobbyPlayers(players){
+  const p1=players[0],p2=players[1];
+  const label=p=>p?(p.ready?"พร้อม":"ยังไม่พร้อม"):"รอผู้เล่น";
+  document.getElementById("p1State").textContent=label(p1);
+  document.getElementById("p2State").textContent=label(p2);
+  const mine=players[onlinePlayer-1];
+  onlineReady=!!(mine&&mine.ready);
+  const both=!!(p1&&p2),btn=document.getElementById("readyBtn");
+  btn.disabled=!both||onlineReady;
+  btn.textContent=!both?"รอผู้เล่นอีกฝ่าย":(p1.ready&&p2.ready)?"ทั้งสองฝ่ายพร้อม":onlineReady?"กำลังรออีกฝ่าย...":"พร้อม";
+}
+// Leave the board / pick screens and show the lobby again (inRoom=true keeps the room code on screen).
+function backToLobby(message,inRoom){
+  onlineStarted=false;onlineGame=false;onlineSubmitted=false;onlineRematchSent=false;onlineRematchOpp=false;onlineReady=false;
+  U=[];over=-1;FX=[];fxOut=[];sel=null;mode=-1;msg="";pick=[];
+  $("g").innerHTML="";$("su").style.display="none";
+  $("onlineLobby").style.display="flex";
+  if(!inRoom){onlineRoom=null;onlinePlayer=0}
+  $("lobbyHome").hidden=inRoom;
+  $("lobbyRoom").hidden=!inRoom;
+  lobbyStatus(message);
+}
+function returnToBoardArena(){
+  if(onlineStarted)return;
+  onlineStarted=true;onlineGame=true;onlineMyTeam=onlinePlayer-1;pick=[];onlineSubmitted=false;onlineRematchSent=false;onlineRematchOpp=false;
+  const lobby=document.getElementById("onlineLobby");
+  if(lobby)lobby.style.display="none";
+  setup();
+}
+// Sends the current snapshot plus the visual effects produced since the last snapshot.
+function broadcastGameState(){
+  if(!onlineGame||applyingRemoteState||!onlineSocket?.connected||!onlineRoom)return;
+  onlineSocket.emit("game_state",{roomCode:onlineRoom,state:{U,P,turn,over,nid,msg,fx:fxOut}});
+  fxOut=[];
+}
+function startOnlineGame(data){
+  onlineGame=true;onlinePicks=data.picks;onlineMyTeam=onlinePlayer-1;U=[];over=-1;nid=1;msg="เกมเริ่มแล้ว";FX=[];fxOut=[];sel=null;mode=-1;
+  onlineRematchSent=false;onlineRematchOpp=false;
+  for(let team=0;team<2;team++){
+    const chosen=data.picks[team]||[],coords=spread(chosen.length);
+    chosen.forEach((k,i)=>U.push(mk(k,team,coords[i],team===0?9:0)));
+  }
+  $("su").style.display="none";
+  // Both clients build the identical opening position, so neither needs to send it to the other.
+  applyingRemoteState=true;
+  try{begin(data.firstTurn===0?0:1)}finally{applyingRemoteState=false}
+}
+function connectOnlineLobby(){
+  if(typeof io!=="function"){
+    lobbyStatus("โหลด Socket.IO ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    return;
+  }
+  onlineSocket=io();
+  onlineSocket.on("connect",()=>{
+    if(onlineEverConnected&&onlineRoom){
+      // The server drops a player's room when the connection breaks, so the old room no longer exists.
+      backToLobby("การเชื่อมต่อหลุด ห้องเดิมถูกปิดแล้ว กรุณาสร้างห้องใหม่หรือเข้าร่วมอีกครั้ง",false);
+    }else lobbyStatus("เชื่อมต่อเซิร์ฟเวอร์แล้ว");
+    onlineEverConnected=true;
+  });
+  onlineSocket.on("connect_error",()=>lobbyStatus("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองรีเฟรชอีกครั้ง"));
+  onlineSocket.on("room_created",data=>{
+    showLobbyRoom(data);
+    lobbyStatus("สร้างห้องสำเร็จ ส่งรหัสนี้ให้อีกฝ่ายได้เลย");
+  });
+  onlineSocket.on("room_joined",data=>{
+    showLobbyRoom(data);
+    lobbyStatus("เข้าห้องสำเร็จ");
+  });
+  onlineSocket.on("room_update",data=>{
+    const ps=data.players||[];
+    updateLobbyPlayers(ps);
+    if(onlineStarted)return;
+    const both=ps.length===2&&ps.every(p=>p);
+    if(both&&ps.every(p=>p.ready)){
+      lobbyStatus("ผู้เล่นทั้งสองฝ่ายพร้อมแล้ว! กำลังกลับเข้าสู่ Board Arena...");
+      setTimeout(returnToBoardArena,700);
+    }else{
+      lobbyStatus(both?"รอผู้เล่นทั้งสองฝ่ายกดพร้อม...":"รอผู้เล่นอีกฝ่ายเข้าห้อง...");
+    }
+  });
+  onlineSocket.on("game_start",data=>{lobbyStatus("เริ่มการแข่งขัน!");startOnlineGame(data);});
+  onlineSocket.on("game_state",data=>{
+    if(!onlineGame||!data?.state)return;
+    applyingRemoteState=true;
+    try{
+      const st=data.state;
+      U=st.U;P=st.P;turn=st.turn;over=st.over;nid=st.nid;msg=st.msg||"";sel=null;mode=-1;
+      (st.fx||[]).forEach(f=>addFx(f));
+      render();
+    }finally{applyingRemoteState=false}
+  });
+  onlineSocket.on("rematch_requested",()=>{onlineRematchOpp=true;if(over>=0)render();});
+  onlineSocket.on("rematch_start",()=>{
+    U=[];over=-1;FX=[];fxOut=[];sel=null;mode=-1;msg="";pick=[];
+    onlineSubmitted=false;onlineRematchSent=false;onlineRematchOpp=false;
+    $("g").innerHTML="";
+    setup();
+  });
+  onlineSocket.on("room_error",data=>{
+    const text=data.message||"เกิดข้อผิดพลาด";
+    if(onlineStarted&&onlineSubmitted&&!U.length){onlineSubmitted=false;setup();$("pickWait").textContent=text;}
+    else lobbyStatus(text);
+  });
+  onlineSocket.on("player_left",()=>{
+    if(onlineStarted)backToLobby("ผู้เล่นอีกฝ่ายออกจากห้อง กลับมารอที่ล็อบบี้ ส่งรหัสห้องให้คนใหม่ได้เลย",true);
+    else lobbyStatus("ผู้เล่นอีกฝ่ายออกจากห้องแล้ว");
+  });
+  onlineSocket.on("disconnect",()=>lobbyStatus("การเชื่อมต่อขาดหาย กำลังเชื่อมต่อใหม่..."));
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  connectOnlineLobby();
+  document.getElementById("createRoomBtn").onclick=()=>{
+    if(onlineSocket?.connected) onlineSocket.emit("create_room");
+    else lobbyStatus("ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์");
+  };
+  document.getElementById("joinRoomBtn").onclick=()=>{
+    const code=document.getElementById("roomCodeInput").value.trim().toUpperCase();
+    if(code.length!==6){lobbyStatus("กรุณากรอกรหัสห้อง 6 ตัว");return;}
+    if(onlineSocket?.connected) onlineSocket.emit("join_room",{roomCode:code});
+    else lobbyStatus("ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์");
+  };
+  document.getElementById("readyBtn").onclick=()=>{
+    if(!onlineRoom||!onlineSocket?.connected)return;
+    onlineSocket.emit("set_ready",{roomCode:onlineRoom});
+    lobbyStatus("ส่งสถานะพร้อมแล้ว");
+  };
+  document.getElementById("leaveRoomBtn").onclick=()=>{
+    if(onlineSocket?.connected) onlineSocket.emit("leave_room");
+    backToLobby("ออกจากห้องแล้ว",false);
+  };
+});
+
+</script>
+</body>
+</html>
